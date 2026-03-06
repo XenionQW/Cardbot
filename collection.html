@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Моя коллекция — CardBlackHole</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --border: #1e1e2e;
+      --accent: #7c3aed;
+      --accent2: #2563eb;
+      --gold: #f59e0b;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --black-hole: #000000;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    .stars {
+      position: fixed; inset: 0; z-index: 0;
+      background: radial-gradient(ellipse at 20% 50%, #1a0533 0%, transparent 50%),
+                  radial-gradient(ellipse at 80% 20%, #0d1b4b 0%, transparent 40%),
+                  var(--bg);
+    }
+
+    .stars::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 10% 15%, white, transparent),
+        radial-gradient(1px 1px at 30% 70%, white, transparent),
+        radial-gradient(1px 1px at 50% 30%, white, transparent),
+        radial-gradient(1px 1px at 70% 80%, white, transparent),
+        radial-gradient(1px 1px at 90% 10%, white, transparent),
+        radial-gradient(1px 1px at 20% 90%, white, transparent),
+        radial-gradient(1px 1px at 60% 55%, white, transparent),
+        radial-gradient(2px 2px at 40% 40%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(2px 2px at 80% 60%, rgba(255,255,255,0.3), transparent);
+    }
+
+    .container {
+      position: relative; z-index: 1;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .header {
+      text-align: center;
+      padding: 24px 0 16px;
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #a78bfa, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header .subtitle { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 8px;
+      text-align: center;
+    }
+
+    .stat-card .val {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .stat-card .lbl {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+
+    .filter-tabs::-webkit-scrollbar { display: none; }
+
+    .tab {
+      flex-shrink: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s;
+      cursor: pointer;
+    }
+
+    .card:hover { transform: translateY(-2px); }
+
+    .card.common   { border-color: #374151; }
+    .card.rare     { border-color: #1d4ed8; box-shadow: 0 0 12px #1d4ed830; }
+    .card.epic     { border-color: #6d28d9; box-shadow: 0 0 12px #6d28d930; }
+    .card.legendary {
+      border-color: #d97706;
+      box-shadow: 0 0 16px #d9770640;
+      background: linear-gradient(135deg, #12121a, #1a1205);
+    }
+    .card.black_hole {
+      border-color: #1a1a2e;
+      box-shadow: 0 0 24px #7c3aed50, inset 0 0 30px rgba(0,0,0,0.8);
+      background: radial-gradient(ellipse at center, #0d0d1a 0%, #000 70%);
+      animation: pulse-hole 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse-hole {
+      0%, 100% { box-shadow: 0 0 24px #7c3aed50, inset 0 0 30px rgba(0,0,0,0.8); }
+      50% { box-shadow: 0 0 40px #7c3aed80, inset 0 0 50px rgba(0,0,0,0.9); }
+    }
+
+    .card-glow {
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      pointer-events: none;
+    }
+
+    .card.black_hole .card-glow {
+      background: radial-gradient(ellipse at 30% 30%, rgba(124,58,237,0.15), transparent 60%);
+    }
+
+    .card-emoji { font-size: 2.2rem; margin-bottom: 8px; display: block; }
+
+    .card-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+      line-height: 1.2;
+    }
+
+    .card-rarity {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .card.rare     .card-rarity { color: #60a5fa; }
+    .card.epic     .card-rarity { color: #a78bfa; }
+    .card.legendary .card-rarity { color: #fbbf24; }
+    .card.black_hole .card-rarity { color: #c084fc; }
+
+    .card-power {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .card-count {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 2px 7px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="stars"></div>
+  <div class="container">
+    <div class="header">
+      <h1>🌌 CardBlackHole</h1>
+      <div class="subtitle" id="username">Загрузка...</div>
+    </div>
+
+    <div class="stats-row" id="stats" style="display:none">
+      <div class="stat-card">
+        <div class="val" id="stat-total">0</div>
+        <div class="lbl">🃏 Карточек</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="stat-power">0</div>
+        <div class="lbl">⚡ Сила</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="stat-bh">0</div>
+        <div class="lbl">🕳️ ЧД</div>
+      </div>
+    </div>
+
+    <div class="filter-tabs" id="tabs" style="display:none">
+      <div class="tab active" data-rarity="all">Все</div>
+      <div class="tab" data-rarity="black_hole">🕳️ ЧД</div>
+      <div class="tab" data-rarity="legendary">🟡 Легенд.</div>
+      <div class="tab" data-rarity="epic">🟣 Эпич.</div>
+      <div class="tab" data-rarity="rare">🔵 Редкие</div>
+      <div class="tab" data-rarity="common">⬜ Обычные</div>
+    </div>
+
+    <div id="cards-container">
+      <div class="loading">
+        <div class="spinner"></div>
+        <div>Загружаем коллекцию...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) { tg.ready(); tg.expand(); }
+
+    const params = new URLSearchParams(window.location.search);
+    const userId = params.get('user_id');
+
+    const RARITY_LABELS = {
+      common: '⬜ Обычная',
+      rare: '🔵 Редкая',
+      epic: '🟣 Эпическая',
+      legendary: '🟡 Легендарная',
+      black_hole: '🕳️ Чёрная дыра',
+    };
+
+    let allCards = [];
+    let activeFilter = 'all';
+
+    async function load() {
+      try {
+        const res = await fetch(`/api/collection/${userId}`);
+        if (!res.ok) throw new Error('Not found');
+        const data = await res.json();
+
+        document.getElementById('username').textContent =
+          `@${data.user.username || data.user.first_name}`;
+        document.getElementById('stat-total').textContent = data.user.total_cards;
+        document.getElementById('stat-power').textContent = data.total_power;
+        document.getElementById('stat-bh').textContent = data.user.black_holes;
+        document.getElementById('stats').style.display = 'grid';
+        document.getElementById('tabs').style.display = 'flex';
+
+        allCards = data.cards;
+        renderCards(allCards);
+
+        document.querySelectorAll('.tab').forEach(tab => {
+          tab.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            activeFilter = tab.dataset.rarity;
+            const filtered = activeFilter === 'all'
+              ? allCards
+              : allCards.filter(c => c.rarity === activeFilter);
+            renderCards(filtered);
+          });
+        });
+      } catch (e) {
+        document.getElementById('cards-container').innerHTML =
+          '<div class="empty-state"><div class="icon">😶</div><div>Коллекция пуста</div></div>';
+      }
+    }
+
+    function renderCards(cards) {
+      const container = document.getElementById('cards-container');
+      if (!cards.length) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><div>Нет карточек</div></div>';
+        return;
+      }
+
+      const grid = document.createElement('div');
+      grid.className = 'cards-grid';
+
+      cards.forEach(card => {
+        const el = document.createElement('div');
+        el.className = `card ${card.rarity}`;
+        el.innerHTML = `
+          <div class="card-glow"></div>
+          ${card.count > 1 ? `<div class="card-count">×${card.count}</div>` : ''}
+          <span class="card-emoji">${card.emoji}</span>
+          <div class="card-name">${card.name}</div>
+          <div class="card-rarity">${RARITY_LABELS[card.rarity]}</div>
+          <div class="card-power">⚡ ${card.power}</div>
+        `;
+        grid.appendChild(el);
+      });
+
+      container.innerHTML = '';
+      container.appendChild(grid);
+    }
+
+    load();
+  </script>
+</body>
+</html>
